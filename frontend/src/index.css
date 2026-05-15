@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Edmund';
+  src: url('/fonts/Edmund.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@layer base {
+  body { font-family:'DM Sans',sans-serif; background:linear-gradient(160deg,#F5E7D3 0%,#E9D1B5 100%); color:#3A1F14; min-height:100vh; -webkit-tap-highlight-color:transparent; }
+}
+
+@layer components {
+  .bg-junina { background:linear-gradient(160deg,#F5E7D3 0%,#E9D1B5 60%,#E0C4A0 100%); min-height:100vh; }
+  .card-junina { background:rgba(255,255,255,0.85); backdrop-filter:blur(8px); border-radius:1.25rem; border:1px solid rgba(199,154,59,0.25); box-shadow:0 4px 20px rgba(58,31,20,0.08); }
+  .input-junina { width:100%; padding:0.875rem 1rem; border:1.5px solid rgba(199,154,59,0.35); border-radius:0.875rem; background:rgba(255,255,255,0.7); color:#3A1F14; font-size:0.9375rem; outline:none; transition:all 0.2s; }
+  .input-junina:focus { border-color:#C79A3B; box-shadow:0 0 0 3px rgba(199,154,59,0.15); background:#fff; }
+  .input-junina::placeholder { color:rgba(199,154,59,0.5); }
+  .btn-primary { background:linear-gradient(135deg,#C79A3B 0%,#D96C2F 100%); color:white; font-weight:700; border-radius:0.875rem; padding:0.875rem 1.5rem; width:100%; border:none; cursor:pointer; box-shadow:0 4px 16px rgba(199,154,59,0.4); transition:all 0.2s; }
+  .btn-primary:hover:not(:disabled) { filter:brightness(1.08); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-secondary { background:rgba(199,154,59,0.1); color:#C79A3B; font-weight:600; border-radius:0.875rem; padding:0.75rem 1.5rem; width:100%; border:1.5px solid rgba(199,154,59,0.3); cursor:pointer; transition:all 0.2s; }
+
+  /* Moeda */
+  .coin { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:50%; background:linear-gradient(135deg,#C79A3B,#D96C2F); color:white; font-weight:900; font-size:0.75rem; box-shadow:0 2px 8px rgba(199,154,59,0.4); }
+}
+
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes pop { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes bounceIn { from{transform:scale(0);opacity:0} 60%{transform:scale(1.2)} to{transform:scale(1);opacity:1} }
+@keyframes pulseCoin { from{box-shadow:0 0 0 0 rgba(199,154,59,0.4)} to{box-shadow:0 0 0 16px rgba(199,154,59,0)} }
