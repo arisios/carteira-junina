@@ -6,12 +6,13 @@ import Wallet from './pages/Wallet';
 import Claim from './pages/Claim';
 import AuthPage from './pages/AuthPage';
 import AdminPanel from './pages/AdminPanel';
+import Ranking from './pages/Ranking';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function AdminRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen bg-junina flex items-center justify-center"><LoadingSpinner size="lg"/></div>;
-  if (!user || user.role !== 'admin') return <Navigate to="/login" replace/>;
+  if (!user || !['admin','master'].includes(user.role)) return <Navigate to="/login" replace/>;
   return children;
 }
 
@@ -22,6 +23,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Wallet/>}/>
           <Route path="/coletar/:token" element={<Claim/>}/>
+          <Route path="/ranking" element={<Ranking/>}/>
           <Route path="/login" element={<AuthPage/>}/>
           <Route path="/admin" element={<AdminRoute><AdminPanel/></AdminRoute>}/>
           <Route path="*" element={<Navigate to="/" replace/>}/>

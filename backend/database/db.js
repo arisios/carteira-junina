@@ -17,6 +17,15 @@ function initDb() {
   const db = getDb();
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS system_budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      total_budget INTEGER NOT NULL,
+      used_budget INTEGER NOT NULL DEFAULT 0,
+      created_by_admin_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS campaigns (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -26,6 +35,7 @@ function initDb() {
       budget INTEGER,
       spent INTEGER DEFAULT 0,
       active INTEGER DEFAULT 1,
+      system_budget_id INTEGER REFERENCES system_budgets(id),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -49,6 +59,9 @@ function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Migrações seguras
+  try { db.exec('ALTER TABLE campaigns ADD COLUMN system_budget_id INTEGER REFERENCES system_budgets(id)'); } catch {}
 
   require('../../../../shared/users-db').getUsersDb();
   console.log('✅ Banco Carteira Junina inicializado');

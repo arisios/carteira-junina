@@ -3,7 +3,28 @@ const { getDb, getBalance } = require('../database/db');
 const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 
-// Saldo e histórico do usuário
+// Ranking público
+router.get('/ranking', (req, res) => {
+  const db = getDb();
+  const sharedDb = require('../../../../shared/users-db').getUsersDb();
+  const top = db.prepare(`
+    SELECT user_id, COALESCE(SUM(amount),0) as balance
+    FROM transactions WHERE amount > 0
+    GROUP BY user_id ORDER BY balance DESC LIMIT 20
+  `).all();
+  const ranking = top.map((row, i) => {
+    const user = sharedDb.prepare('SELECT name, instagram FROM users WHERE id=?').get(row.user_id);
+    return { position: i+1, name: user?.name || 'Participante', instagram: user?.instagram || null, balance: row.balance };
+  });
+  res.json({ ranking, updated_at: new Date().toISOString() });
+});
+
+// Saldo do usuário autenticado (usado pelos outros sistemas)
+router.get('/balance', authMiddleware, (req, res) => {
+  res.json({ balance: getBalance(req.user.id), user_id: req.user.id });
+});
+
+// Saldo + histórico completo
 router.get('/', authMiddleware, (req, res) => {
   const db = getDb();
   const balance = getBalance(req.user.id);
@@ -11,41 +32,49 @@ router.get('/', authMiddleware, (req, res) => {
     SELECT t.*, c.name as campaign_name
     FROM transactions t
     LEFT JOIN campaigns c ON t.campaign_id = c.id
-    WHERE t.user_id = ?
-    ORDER BY t.created_at DESC
-    LIMIT 50
+    WHERE t.user_id = ? ORDER BY t.created_at DESC LIMIT 50
   `).all(req.user.id);
   res.json({ balance, transactions });
 });
 
-// Coletar pontos via token NFC
+// Coletar pontos via token NFC — transação atômica com desconto hierárquico
 router.post('/claim/:token', authMiddleware, (req, res) => {
   const db = getDb();
 
-  const campaign = db.prepare('SELECT * FROM campaigns WHERE nfc_token = ? AND active = 1').get(req.params.token);
+  const campaign = db.prepare(`
+    SELECT c.*, sb.total_budget as sys_total, sb.used_budget as sys_used
+    FROM campaigns c
+    LEFT JOIN system_budgets sb ON c.system_budget_id = sb.id
+    WHERE c.nfc_token = ? AND c.active = 1
+  `).get(req.params.token);
+
   if (!campaign) return res.status(404).json({ error: 'Ponto não encontrado ou inativo' });
 
-  // Verificar orçamento disponível
-  if (campaign.budget !== null && campaign.spent + campaign.points > campaign.budget) {
+  if (campaign.budget !== null && campaign.spent + campaign.points > campaign.budget)
     return res.status(400).json({ error: 'Este ponto esgotou seu orçamento' });
-  }
 
-  // Tentar inserir claim — UNIQUE(user_id, campaign_id) impede duplicata
+  if (campaign.system_budget_id && campaign.sys_used + campaign.points > campaign.sys_total)
+    return res.status(400).json({ error: 'Sistema sem orçamento disponível' });
+
+  const doTransaction = db.transaction(() => {
+    db.prepare('INSERT INTO claims (user_id, campaign_id, points) VALUES (?,?,?)').run(req.user.id, campaign.id, campaign.points);
+    db.prepare('INSERT INTO transactions (user_id, amount, type, description, campaign_id) VALUES (?,?,?,?,?)').run(
+      req.user.id, campaign.points, 'earn', `Coletado em: ${campaign.name}`, campaign.id
+    );
+    db.prepare('UPDATE campaigns SET spent = spent + ? WHERE id=?').run(campaign.points, campaign.id);
+    if (campaign.system_budget_id) {
+      db.prepare('UPDATE system_budgets SET used_budget = used_budget + ? WHERE id=?').run(campaign.points, campaign.system_budget_id);
+    }
+  });
+
   try {
-    db.prepare('INSERT INTO claims (user_id, campaign_id, points) VALUES (?, ?, ?)').run(req.user.id, campaign.id, campaign.points);
+    doTransaction();
   } catch (err) {
     if (err.message?.includes('UNIQUE')) return res.status(400).json({ error: 'Você já coletou este ponto!', already_claimed: true });
     throw err;
   }
 
-  // Registrar transação e atualizar gasto da campanha
-  db.prepare('INSERT INTO transactions (user_id, amount, type, description, campaign_id) VALUES (?, ?, ?, ?, ?)').run(
-    req.user.id, campaign.points, 'earn', `Coletado em: ${campaign.name}`, campaign.id
-  );
-  db.prepare('UPDATE campaigns SET spent = spent + ? WHERE id = ?').run(campaign.points, campaign.id);
-
-  const newBalance = getBalance(req.user.id);
-  res.json({ success: true, points: campaign.points, balance: newBalance, campaign: campaign.name });
+  res.json({ success: true, points: campaign.points, balance: getBalance(req.user.id), campaign: campaign.name });
 });
 
 module.exports = router;

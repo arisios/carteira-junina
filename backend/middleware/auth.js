@@ -10,9 +10,18 @@ function authMiddleware(req, res, next) {
 
 function adminMiddleware(req, res, next) {
   authMiddleware(req, res, () => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Acesso restrito ao administrador' });
+    if (!['admin', 'master'].includes(req.user.role))
+      return res.status(403).json({ error: 'Acesso restrito ao administrador' });
     next();
   });
 }
 
-module.exports = { JWT_SECRET, authMiddleware, adminMiddleware };
+function masterMiddleware(req, res, next) {
+  authMiddleware(req, res, () => {
+    if (req.user.role !== 'master')
+      return res.status(403).json({ error: 'Acesso restrito ao master' });
+    next();
+  });
+}
+
+module.exports = { JWT_SECRET, authMiddleware, adminMiddleware, masterMiddleware };

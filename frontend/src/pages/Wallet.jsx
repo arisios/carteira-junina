@@ -57,6 +57,10 @@ export default function Wallet() {
             📡 Coletar moedas
           </button>
 
+          <button onClick={() => navigate('/ranking')} className="btn-secondary py-3 text-sm">
+            🏆 Ver ranking
+          </button>
+
           {/* Histórico */}
           <div className="card-junina p-4">
             <h2 className="font-display font-bold mb-3" style={{color:'#4B1E6D'}}>Histórico</h2>
